@@ -25,7 +25,7 @@ ROM_Header:
         dc.b "GENESIS OS                                      "	; Domestic name                      
         dc.b "GENESIS OS                                      "	; International name 
         dc.b "OS 00000000-00"					; Serial/version number
-        dc.w $5B74						; Checksum (either non-standard or a leftover from sample code, as it does NOT match what fixheadr computes)
+        dc.w $5B74						; Checksum; interestingly, it does NOT match the ROM. This might be from sample code or from an earlier build of the ROM.
         dc.b "                "					; I/O support 
         dc.l RomStart						; Start address of ROM
         dc.l ROM_End-1						; End address of ROM
@@ -34,7 +34,7 @@ ROM_Header:
 
         dc.b "                        "				; No SRAM support
         dc.b "                                        "		; Notes
-        dc.b "U               "					; Region (Country code), only NA is set despite this ROM being used worldwide
+        dc.b "U               "					; Region (Country code), only NA is set despite this ROM being used worldwide (this may be a leftover from when TMSS was meant to be a region lockout)
 
 ErrorTrap: 
 		bra.s ErrorTrap					; any CPU exceptions that occur while bankswitched to the TMSS ROM are dumped in this infinite loop
@@ -138,7 +138,7 @@ LoadTestProgram:
         lea	RAM_Regs(pc),a1
         movem.l	(a1)+,d4-d7/a2-a6				; set new registers
         
-		move.w	#(sizeof_RAM_Code/2)-1,d0		; set loop counter to 63
+		move.w	#(sizeof_RAM_Code/2)-1,d0		; set loop counter to $3F
 	.copy_to_ram: 
 		move.w	(a1)+,(a0)+				; copy test program to RAM  
 		dbf	d0,.copy_to_ram	
@@ -176,7 +176,7 @@ RAM_Code:
 	.fail: 
 		bclr	#0,(a3)					; bankswitch back to TMSS ROM
 		move.b	(a6),d0					; get version register
-		andi.b 	#console_revision,d0
+		andi.b 	#console_revision,d0			; only hardware revision bits	
 		beq.s	.done					; if no VDP lock, branch
 		move.l	#0,(a2)					; lock the VDP
 	.done:
@@ -234,7 +234,7 @@ Pal_Text_Data:
 	;.license_mappings:
 		dc.b	"   produced by or",endline 
 		dc.b	" under license from",endline 
-		dc.b	"sega,enterprises ltd{",endstring	; opening curly brace represents a period, not sure what comma does
+		dc.b	"sega,enterprises ltd{",endstring	; opening curly brace represents a period, comma may have been meant for a TM symbol or related
 
 
 LoadPal: 
@@ -252,7 +252,7 @@ Load_Mappings:
 	.main:
 		moveq	#0,d1
 		move.b 	(a1)+,d1				; copy current byte of mappings to d1
-		bmi.s	.skip_ahead				; if it is the line terminator, branch
+		bmi.s	.next_line				; if it is the line terminator, branch
 		bne.s	.set					; if not zero, branch
 		rts						; if zero, we are done
 
@@ -260,7 +260,7 @@ Load_Mappings:
 		move.w	d1,(a5)					; copy current mapping to VRAM as word
 		bra.s	.main					; next byte
 
-	.skip_ahead:
+	.next_line:
 		addi.l	#$1000000,d5				; add $1000000 to make VDP command longword to start the next line
 		bra.s	Load_Mappings				; set new write address
 
