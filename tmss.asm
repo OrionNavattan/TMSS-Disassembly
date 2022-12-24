@@ -41,7 +41,7 @@ ErrorTrap:
 
 EntryPoint:
 		; This is a stripped-down version of the standard Mega Drive/Genesis setup library:
-		; it does not clear the main RAM nor does it feed the RAM and registering clearing program
+		; it does not clear the main RAM nor does it feed the usual RAM and registering clearing program
 		; to the Z80, although values related to each of those are still loaded into the registers.
 		; Curiously, it, and the main test program, also seem to account for a hypothetical 
 		; hardware revision that features this bootrom but NOT the VDP DTACK lock mechanism.
@@ -162,12 +162,12 @@ RAM_Regs:
 
 RAM_Code:
 ;Test_Cart:
-		; Everything from here to RAM_Code_End runs from RAM
+		; Everything from here to 'arraysize RAM_Code' runs from RAM.
 		bset	#0,(a3)					; bankswitch to cartridge
 		cmp.l	(ROM_Header).w,d7			; is 'SEGA' at the start of the ROM header?
 		beq.s	.pass					; if so, cartridge has passed test
 	
-		cmp.l	(ROM_Header).w,d4			; if 'SEGA' was not found, try ' SEG'
+		cmp.l	(ROM_Header).w,d4			; if 'SEGA' was not found, try ' SEG' (perhaps accommodating an early game with a typo in the header?)
 		bne.s	.fail					; if that is not found, cartridge has failed the test
 
 		cmpi.b 	#'A',(ROM_Header+4).w			; if ' SEG' was found, check for the last 'A'
@@ -184,7 +184,7 @@ RAM_Code:
 
 .pass:
 		bclr	#0,(a3)					; bankswitch back to the TMSS ROM
-		jsr	LoadPal					; upload the white two-color palette to CRAM
+		jsr	LoadPal					; upload the palette to CRAM
 		vdp_comm.l	move,vram_LicenseFont,vram,write,(a4) ; set VDP to VRAM write at address $C20
 
 	.load_font:
@@ -214,7 +214,7 @@ RAM_Code:
 
 
 
-DelayLoop:							; double-nested loop to wait for 2.5 seconds while the license message is displayed
+DelayLoop:							; double-nested loop to delay for a couple seconds while the license message is displayed
 		move.w	#$95CE,d1				; set inner loop counter to 38,350
 
 	.inner_delay_loop:
@@ -224,8 +224,8 @@ DelayLoop:							; double-nested loop to wait for 2.5 seconds while the license 
 		arraysize	RAM_Code	
 
 Pal_Text_Data:
-		dc.w	1					; Palette size
-		dc.w	$EEE					; White
+		dc.w	1					; palette size
+		dc.w	$EEE					; white
 		dc.w	$EE8					; blue (for unused SEGA logo text)
 
 	;.license_font:
