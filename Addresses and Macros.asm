@@ -62,9 +62,11 @@ console_version:	equ $A10001
 
 ; Z80 addresses
 z80_bus_request:	equ $A11100
-z80_reset:		equ $A11200
-tmss_sega:		equ $A14000				; contains the string "SEGA"
-tmss_bankswitch:		equ $A14101
+z80_reset:			equ $A11200
+
+; TMSS registers 
+tmss_sega:			equ $A14000				; 'SEGA' is written here to unlock the VDP
+tmss_bankswitch:	equ $A14101				; bit 0 switches between TMSS ROM and cart slot
 
 ; Memory sizes
 sizeof_ram:		equ $10000
@@ -99,7 +101,6 @@ endstring:	equ 0
 
 ; ===========================================================================
 ; Macros to improve code readability
-; ---------------------------------------------------------------------------
 
 ; ---------------------------------------------------------------------------
 ; Test if an argument is used

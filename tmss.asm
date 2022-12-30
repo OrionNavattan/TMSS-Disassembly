@@ -1,12 +1,15 @@
-; Trademark Security System bootrom for Sega Genesis
-; (C) 1990 SEGA Corporation
+; =========================================================================
+; Sega Mega Drive/Genesis Trademark Security System Bootrom 
+; Original source code (C) 1990 SEGA Corporation
 
 ; Disassembled for SNASM68K by moxniso using Ghidra v9.2.1 (https://ghidra-sre.org/) 
-; Converted to ASM68K and labeled/commented by OrionNavattan
+; Converted to ASM68K, cleaned up, and labeled/commented by OrionNavattan
 ; Thanks to Hivebrain for the VDP registers and inspiration for the styling
+; =========================================================================
+
 
 		opt	l.					; . is the local label symbol
-		opt	ae-					; automatic evens disabled by default	
+		opt	ae-					; automatic evens disabled 
 		opt	ws+					; allow statements to contain white-spaces
 		opt	w+					; print warnings
 
@@ -41,7 +44,7 @@ ErrorTrap:
 
 EntryPoint:
 		; This is a stripped-down version of the standard Mega Drive/Genesis setup library:
-		; it does not clear the main RAM nor does it feed the usual RAM and registering clearing program
+		; it does not clear the main RAM nor does it feed the usual RAM and register clearing program
 		; to the Z80, although values related to each of those are still loaded into the registers.
 		; Curiously, it, and the main test program, also seem to account for a hypothetical 
 		; hardware revision that features this bootrom but NOT the VDP DTACK lock mechanism.
@@ -74,7 +77,7 @@ EntryPoint:
         btst	#dma_status_bit,d4
         bne.s	.wait_for_dma					; wait until the VRAM clear has finished
         	
-		move.l	#(vdp_md_display<<16)|(vdp_auto_inc+2),(a4) ; set VDP autoincrement to 2 (one word), and disable DMA
+		move.l	#(vdp_md_display<<16)|(vdp_auto_inc+2),(a4) ; set VDP autoincrement to 2 (one word) and disable DMA
         vdp_comm.l	move,0,cram,write,(a4)			; set VDP to CRAM write
         moveq   #(sizeof_cram/4)-1,d3				; set loop counter to $1F
 	.clear_cram:
@@ -132,6 +135,7 @@ SetupValues:
 
 		dc.b	$9F,$BF,$DF,$FF				; PSG mute values
 		
+; =========================================================================
 
 LoadTestProgram:
 		lea	(RAM_Program_Start).w,a0		; RAM address to copy test code to
@@ -150,8 +154,8 @@ FailLoop:
 
 RAM_Regs:
 		dc.l	' SEG'					;d4
-        vdp_comm.l	dc,(vram_fg+$594),vram,write		;d5 ; VRAM write at $C594, location where mappings for license message are written
-        dc.l	(sizeof_LicenseFont/4)-1			;d6 ; loops to copy license message text to VRAM
+        vdp_comm.l	dc,(vram_fg+$594),vram,write		;d5 ; VRAM write at $C594, location where mappings for first line of license message are written
+        dc.l	(sizeof_LicenseFont/4)-1			;d6 ; loops to copy license message font to VRAM
 
         dc.l    'SEGA'						;d7
         dc.l    tmss_sega					;a2
@@ -184,7 +188,7 @@ RAM_Code:
 
 .pass:
 		bclr	#0,(a3)					; bankswitch back to the TMSS ROM
-		jsr	LoadPal					; upload the palette to CRAM
+		jsr	LoadPal					; copy the palette to CRAM
 		vdp_comm.l	move,vram_LicenseFont,vram,write,(a4) ; set VDP to VRAM write at address $C20
 
 	.load_font:
@@ -207,7 +211,7 @@ RAM_Code:
 	.hand_off_to_cart:
 		bset	#0,(a3)					; bankswitch back to cartridge (and stay there permanently)
 		moveq	#0,d0					; clear d0
-		movea.l	d0,a0					; clear a0; it will now be pointing at cartridge's vector table
+		movea.l	d0,a0					; clear a0; it will now be pointing at start of cartridge's vector table
 		movea.l	(a0)+,sp				; load initial stack pointer value from cartridge into stack pointer
 		movea.l	(a0)+,a0				; load start vector from cartridge into a0
 		jmp	(a0)					; hand off to the cartridge by jumping to its start vector
@@ -221,6 +225,7 @@ DelayLoop:							; double-nested loop to delay for a couple seconds while the li
 		dbf d1,.inner_delay_loop
 		dbf d0,DelayLoop				; repeat the inner loop 60 times
 		rts
+
 		arraysize	RAM_Code	
 
 Pal_Text_Data:
@@ -251,13 +256,13 @@ Load_Mappings:
 
 	.main:
 		moveq	#0,d1
-		move.b 	(a1)+,d1				; copy current byte of mappings to d1
+		move.b 	(a1)+,d1				; get current byte of license text to d1
 		bmi.s	.next_line				; if it is the line terminator, branch
 		bne.s	.set					; if not zero, branch
 		rts						; if zero, we are done
 
 	.set:
-		move.w	d1,(a5)					; copy current mapping to VRAM as word
+		move.w	d1,(a5)					; copy current byte to VRAM as word, generating a tile map entry
 		bra.s	.main					; next byte
 
 	.next_line:
