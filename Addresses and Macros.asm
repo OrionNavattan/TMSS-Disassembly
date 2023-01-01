@@ -77,7 +77,7 @@ sizeof_cram:	equ $80
 ram_start: 		equ $FF0000
 ram_end: 		equ $FFFFFF
 
-; ===========================================================================
+; ---------------------------------------------------------------------------
 ; Addresses and constants specific to this program
 ; ---------------------------------------------------------------------------
 
@@ -86,6 +86,9 @@ vram_bg:		equ	$E000
 vram_window:	equ $F000
 vram_sprites:	equ	$D800
 vram_hscroll:	equ	$DC00
+
+widthof_cell:			equ	8					; width of single tile in pixels
+sizeof_vram_row_64:		equ (512/widthof_cell)*2				; $80,  single row of fg/bg nametable when 64 cells (512 pixels) wide 
 
 vram_LicenseFont:	equ	$C20				; location in VRAM where license font is loaded
 

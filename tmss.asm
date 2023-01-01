@@ -101,9 +101,9 @@ SetupValues:
 		dc.l    vdp_mode_register1			; d5
         dc.l    (sizeof_ram/4)-1				; d6, unused
         dc.l    vdp_mode_register2-vdp_mode_register1		; d7
-        dc.l    z80_ram						; a0
+        dc.l    z80_ram						; a0	; unused
         dc.l    z80_bus_request					; a1
-        dc.l    z80_reset					; a2
+        dc.l    z80_reset					; a2`	; unused
         dc.l    vdp_data_port					; a3
         dc.l    vdp_control_port				; a4
 
@@ -139,7 +139,7 @@ SetupValues:
 
 LoadTestProgram:
 		lea	(RAM_Program_Start).w,a0		; RAM address to copy test code to
-        lea	RAM_Regs(pc),a1
+        lea	RAM_Regs(pc),a1					; array with register values to be used during test and displaying the license message
         movem.l	(a1)+,d4-d7/a2-a6				; set new registers
         
 		move.w	#(sizeof_RAM_Code/2)-1,d0		; set loop counter to $3F
@@ -153,16 +153,16 @@ FailLoop:
 		bra.s	FailLoop				; if the cartridge failed the test, the program ends in this infinite loop
 
 RAM_Regs:
-		dc.l	' SEG'					;d4
-        vdp_comm.l	dc,(vram_fg+$594),vram,write		;d5 ; VRAM write at $C594, location where mappings for first line of license message are written
-        dc.l	(sizeof_LicenseFont/4)-1			;d6 ; loops to copy license message font to VRAM
+		dc.l	' SEG'					; d4
+        vdp_comm.l	dc,(vram_fg+((sizeof_vram_row_64*11)+(2*10))),vram,write		;d5 ; VRAM write at $C594 (Line 11, column 10), start location of mappings for first line of license message
+        dc.l	(sizeof_LicenseFont/4)-1			; d6; loops to copy license message font to VRAM
 
-        dc.l    'SEGA'						;d7
-        dc.l    tmss_sega					;a2
-        dc.l    tmss_bankswitch					;a3
-        dc.l    vdp_control_port				;a4
-        dc.l    vdp_data_port					;a5
-        dc.l    console_version					;a6
+        dc.l    'SEGA'						; d7
+        dc.l    tmss_sega					; a2
+        dc.l    tmss_bankswitch					; a3
+        dc.l    vdp_control_port				; a4
+        dc.l    vdp_data_port					; a5
+        dc.l    console_version					; a6
 
 RAM_Code:
 ;Test_Cart:
@@ -196,6 +196,7 @@ RAM_Code:
 		dbf	d6,.load_font
 
 		jsr Load_Mappings				; copy the ASCII-based mappings for the license message to VRAM
+		
 		move.w	#vdp_enable_display|vdp_md_display,(a4)	; enable display, showing the license message
 		move.w	#$3C,d0
 		bsr.s	DelayLoop				; wait for a few seconds
@@ -256,13 +257,13 @@ Load_Mappings:
 
 	.main:
 		moveq	#0,d1
-		move.b 	(a1)+,d1				; get current byte of license text to d1
+		move.b 	(a1)+,d1				; get current byte of license text
 		bmi.s	.next_line				; if it is the line terminator, branch
 		bne.s	.set					; if not zero, branch
 		rts						; if zero, we are done
 
 	.set:
-		move.w	d1,(a5)					; copy current byte to VRAM as word, generating a tile map entry
+		move.w	d1,(a5)					; copy current byte to VRAM as word, making it into a tile map entry
 		bra.s	.main					; next byte
 
 	.next_line:
