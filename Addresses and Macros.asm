@@ -77,6 +77,11 @@ sizeof_cram:	equ $80
 ram_start: 		equ $FF0000
 ram_end: 		equ $FFFFFF
 
+tPSG1:			equ $80					; PSG channel 1
+tPSG2:			equ $A0				; PSG channel 2
+tPSG3:			equ $C0				; PSG channel 3
+tPSG4:			equ $E0				; PSG channel 4
+
 ; ---------------------------------------------------------------------------
 ; Addresses and constants specific to this program
 ; ---------------------------------------------------------------------------

@@ -133,7 +133,7 @@ SetupValues:
     
     	arraysize	SetupVDP
 
-		dc.b	$9F,$BF,$DF,$FF				; PSG mute values
+		dc.b	tPSG1|$1F,tPSG2|$1F,tPSG3|$1F,tPSG4|$1F				; PSG mute values
 		
 ; =========================================================================
 
