@@ -58,14 +58,14 @@ z80_ram:		equ $A00000				; start of Z80 RAM
 
 ; I/O addresses
 console_version:	equ $A10001
-	console_revision:	equ $F				; revision id in bits 0-3; revision 0 has no TMSS
+	console_revision:	equ $F				; revision id in bits 0-3; revision 0 has no VDP lock
 
 ; Z80 addresses
 z80_bus_request:	equ $A11100
 z80_reset:			equ $A11200
 
 ; TMSS registers 
-tmss_sega:			equ $A14000				; 'SEGA' is written here to unlock the VDP
+tmss_sega:			equ $A14000			; 'SEGA' is written here to unlock the VDP
 tmss_bankswitch:	equ $A14101				; bit 0 switches between TMSS ROM and cart slot
 
 ; Memory sizes
@@ -78,9 +78,9 @@ ram_start: 		equ $FF0000
 ram_end: 		equ $FFFFFF
 
 tPSG1:			equ $80					; PSG channel 1
-tPSG2:			equ $A0				; PSG channel 2
-tPSG3:			equ $C0				; PSG channel 3
-tPSG4:			equ $E0				; PSG channel 4
+tPSG2:			equ $A0					; PSG channel 2
+tPSG3:			equ $C0					; PSG channel 3
+tPSG4:			equ $E0					; PSG channel 4
 
 ; ---------------------------------------------------------------------------
 ; Addresses and constants specific to this program
@@ -92,23 +92,22 @@ vram_window:	equ $F000
 vram_sprites:	equ	$D800
 vram_hscroll:	equ	$DC00
 
-widthof_cell:			equ	8					; width of single tile in pixels
-sizeof_vram_row_64:		equ (512/widthof_cell)*2				; $80,  single row of fg/bg nametable when 64 cells (512 pixels) wide 
+widthof_cell:			equ	8			; width of single tile in pixels
+sizeof_vram_row_64:		equ (512/widthof_cell)*2	; $80,  single row of fg/bg nametable when 64 cells (512 pixels) wide 
 
 vram_LicenseFont:	equ	$C20				; location in VRAM where license font is loaded
 
 RAM_Program_Start: 	equ	$FFFFC000			; location in RAM where TMSS test code is copied
 
-stack_pointer:		equ	$FFFF00
+stack_pointer:		equ	$FFFF00				; initial stack pointer value
 						
 sizeof_LicenseFont:	equ	filesize("License Text Font.bin")
 
-; Flag values used in license text string
+; Flag values used in license text strings
 endline:	equ $FF
 endstring:	equ 0
 
 ; ===========================================================================
-; Macros to improve code readability
 
 ; ---------------------------------------------------------------------------
 ; Test if an argument is used

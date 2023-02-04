@@ -39,16 +39,22 @@ ROM_Header:
         dc.b "                                        "		; Notes
         dc.b "U               "					; Region (Country code), only NA is set despite this ROM being used worldwide (this may be a leftover from when TMSS was meant to be a region lockout)
 
+; =========================================================================
+
 ErrorTrap: 
 		bra.s ErrorTrap					; any CPU exceptions that occur while bankswitched to the TMSS ROM are dumped in this infinite loop
 
+; =========================================================================
+; ---------------------------------------------------------------------------
+; This is a stripped-down version of the standard ICD_BLK4 init library.
+; it does not clear the main RAM (which isn't necessary here since that was a
+; workaround for a hardware bug on the Model 1 VA0), nor does it feed the usual 
+; RAM and register clearing program to the Z80, although values related to each 
+; of those are still loaded into the registers. Curiously, it, and the main 
+; test program, also seem to account for a hypothetical hardware revision that 
+; features this bootrom but NOT the VDP DTACK/RESET lock mechanism.
+; ---------------------------------------------------------------------------
 EntryPoint:
-		; This is a stripped-down version of the standard Mega Drive/Genesis setup library:
-		; it does not clear the main RAM nor does it feed the usual RAM and register clearing program
-		; to the Z80, although values related to each of those are still loaded into the registers.
-		; Curiously, it, and the main test program, also seem to account for a hypothetical 
-		; hardware revision that features this bootrom but NOT the VDP DTACK lock mechanism.
-		
 		lea	SetupValues(pc),a5			; load setup array	
         movem.l (a5)+,d5-a4					; first VDP register value, clear_ram loop counter (unused), VDP register increment, Z80 RAM start (unused), Z80 bus request register, Z80 reset register, VDP data port, VDP control port
         move.b  console_version-z80_bus_request(a1),d0		; get console version 
@@ -133,13 +139,13 @@ SetupValues:
     
     	arraysize	SetupVDP
 
-		dc.b	tPSG1|$1F,tPSG2|$1F,tPSG3|$1F,tPSG4|$1F				; PSG mute values
+		dc.b	tPSG1|$1F,tPSG2|$1F,tPSG3|$1F,tPSG4|$1F	; PSG mute values
 		
 ; =========================================================================
 
 LoadTestProgram:
 		lea	(RAM_Program_Start).w,a0		; RAM address to copy test code to
-        lea	RAM_Regs(pc),a1					; array with register values to be used during test and displaying the license message
+        lea	Test_Registers(pc),a1				; array with register values to be used during test and displaying the license message
         movem.l	(a1)+,d4-d7/a2-a6				; set new registers
         
 		move.w	#(sizeof_RAM_Code/2)-1,d0		; set loop counter to $3F
@@ -147,14 +153,14 @@ LoadTestProgram:
 		move.w	(a1)+,(a0)+				; copy test program to RAM  
 		dbf	d0,.copy_to_ram	
 	
-		jsr	(RAM_Program_Start).w			; jump to the code we just copied. we will not be returning here if the cartridge passes the test
+		jsr	(RAM_Program_Start).w			; jump to the code we just copied; we will not be returning here if the cartridge passes the test
 
 FailLoop: 	
 		bra.s	FailLoop				; if the cartridge failed the test, the program ends in this infinite loop
 
-RAM_Regs:
+Test_Registers:
 		dc.l	' SEG'					; d4
-        vdp_comm.l	dc,(vram_fg+((sizeof_vram_row_64*11)+(2*10))),vram,write		;d5 ; VRAM write at $C594 (Line 11, column 10), start location of mappings for first line of license message
+        vdp_comm.l	dc,(vram_fg+((sizeof_vram_row_64*11)+(2*10))),vram,write ;d5 ; VRAM write at $C594 (Line 11, column 10), start location of mappings for first line of license message
         dc.l	(sizeof_LicenseFont/4)-1			; d6; loops to copy license message font to VRAM
 
         dc.l    'SEGA'						; d7
@@ -164,9 +170,16 @@ RAM_Regs:
         dc.l    vdp_data_port					; a5
         dc.l    console_version					; a6
 
+; =========================================================================
+; ---------------------------------------------------------------------------
+; Everything from here to 'arraysize RAM_Code' runs from RAM.
+; This is an excellent example of relocatable code: all branches within this
+; code are relative, meaning we do not have to use ASM68K's obj function
+; to assemble it.
+; ---------------------------------------------------------------------------
+
 RAM_Code:
-;Test_Cart:
-		; Everything from here to 'arraysize RAM_Code' runs from RAM.
+
 		bset	#0,(a3)					; bankswitch to cartridge
 		cmp.l	(ROM_Header).w,d7			; is 'SEGA' at the start of the ROM header?
 		beq.s	.pass					; if so, cartridge has passed test
@@ -183,6 +196,7 @@ RAM_Code:
 		andi.b 	#console_revision,d0			; only hardware revision bits	
 		beq.s	.done					; if no VDP lock, branch
 		move.l	#0,(a2)					; lock the VDP
+
 	.done:
 		rts						; if we're here, cartridge failed TMSS check; return and trap in FailLoop
 
@@ -258,12 +272,12 @@ Load_Mappings:
 	.main:
 		moveq	#0,d1
 		move.b 	(a1)+,d1				; get current byte of license text
-		bmi.s	.next_line				; if it is the line terminator, branch
+		bmi.s	.next_line				; if it's the line terminator, branch
 		bne.s	.set					; if not zero, branch
 		rts						; if zero, we are done
 
 	.set:
-		move.w	d1,(a5)					; copy current byte to VRAM as word, making it into a tile map entry
+		move.w	d1,(a5)					; copy current byte to VRAM as word, making it into a tilemap entry
 		bra.s	.main					; next byte
 
 	.next_line:
