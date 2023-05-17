@@ -4,7 +4,8 @@
 
 ; Disassembled for SNASM68K by moxniso using Ghidra v9.2.1 (https://ghidra-sre.org/) 
 ; Converted to ASM68K, cleaned up, and labeled/commented by OrionNavattan
-; Thanks to Hivebrain for the VDP registers and inspiration for the styling
+; Thanks to Hivebrain for the VDP registers and inspiration for the styling,
+; and MarkeyJester for information about the comma in the message text.
 ; =========================================================================
 
 
@@ -15,7 +16,6 @@
 
 		include "Addresses and Macros.asm"
 
-
 RomStart:
 		; CPU vectors
 		dc.l   stack_pointer				; initial stack pointer value
@@ -23,22 +23,21 @@ RomStart:
 		dcb.l	62,ErrorTrap				; all other vectors
 
 ROM_Header:
-		dc.b "SEGA GENESIS    "				; Hardware system ID (Console name)
-        dc.b "(C)SEGA 1990.MAY"					; Copyright holder and release date 
+		dc.b "SEGA GENESIS    "				; hardware system ID (Console name)
+        dc.b "(C)SEGA 1990.MAY"					; copyright holder and release date 
         dc.b "GENESIS OS                                      "	; Domestic name                      
-        dc.b "GENESIS OS                                      "	; International name 
-        dc.b "OS 00000000-00"					; Serial/version number
-        dc.w $5B74						; Checksum; interestingly, it does NOT match the ROM. This might be from sample code or from an earlier build of the ROM.
+        dc.b "GENESIS OS                                      "	; international name 
+        dc.b "OS 00000000-00"					; serial/version number
+        dc.w $5B74						; checksum; interestingly, it does NOT match the ROM. This might be from sample code or from an earlier build of the ROM.
         dc.b "                "					; I/O support 
-        dc.l RomStart						; Start address of ROM
-        dc.l ROM_End-1						; End address of ROM
-        dc.l ram_start						; Start address of RAM
-        dc.l ram_end						; End address of RAM
+        dc.l RomStart						; start address of ROM
+        dc.l ROM_End-1						; end address of ROM
+        dc.l ram_start						; start address of RAM
+        dc.l ram_end						; end address of RAM
 
-        dc.b "                        "				; No SRAM support
-        dc.b "                                        "		; Notes
-        dc.b "U               "					; Region (Country code), only NA is set despite this ROM being used worldwide (this may be a leftover from when TMSS was meant to be a region lockout)
-
+        dc.b "                        "				; no SRAM support
+        dc.b "                                        "		; notes
+        dc.b "U               "					; region (Country code), only North America is set despite this ROM being used worldwide (this may be a leftover from when TMSS was meant to be a region lockout)
 ; =========================================================================
 
 ErrorTrap: 
@@ -102,14 +101,15 @@ EntryPoint:
         dbf d5,.loop_psg
         
 		bra.s   LoadTestProgram
-
+; =========================================================================	
+	
 SetupValues:
 		dc.l    vdp_mode_register1			; d5
         dc.l    (sizeof_ram/4)-1				; d6, unused
         dc.l    vdp_mode_register2-vdp_mode_register1		; d7
         dc.l    z80_ram						; a0	; unused
         dc.l    z80_bus_request					; a1
-        dc.l    z80_reset					; a2`	; unused
+        dc.l    z80_reset					; a2,	; unused
         dc.l    vdp_data_port					; a3
         dc.l    vdp_control_port				; a4
 
@@ -139,8 +139,7 @@ SetupValues:
     
     	arraysize	SetupVDP
 
-		dc.b	tPSG1|$1F,tPSG2|$1F,tPSG3|$1F,tPSG4|$1F	; PSG mute values
-		
+		dc.b	tPSG1|$1F,tPSG2|$1F,tPSG3|$1F,tPSG4|$1F	; PSG mute values	
 ; =========================================================================
 
 LoadTestProgram:
@@ -157,12 +156,12 @@ LoadTestProgram:
 
 FailLoop: 	
 		bra.s	FailLoop				; if the cartridge failed the test, the program ends in this infinite loop
+; =========================================================================
 
 Test_Registers:
 		dc.l	' SEG'					; d4
         vdp_comm.l	dc,(vram_fg+((sizeof_vram_row_64*11)+(2*10))),vram,write ;d5 ; VRAM write at $C594 (Line 11, column 10), start location of mappings for first line of license message
         dc.l	(sizeof_LicenseFont/4)-1			; d6; loops to copy license message font to VRAM
-
         dc.l    'SEGA'						; d7
         dc.l    tmss_sega					; a2
         dc.l    tmss_bankswitch					; a3
@@ -199,17 +198,21 @@ RAM_Code:
 
 	.done:
 		rts						; if we're here, cartridge failed TMSS check; return and trap in FailLoop
-
+; =========================================================================
+; ---------------------------------------------------------------------------
+; If cartridge passed the test, load the message assets and display it for
+; several seconds.
+; ---------------------------------------------------------------------------
 .pass:
 		bclr	#0,(a3)					; bankswitch back to the TMSS ROM
-		jsr	LoadPal					; copy the palette to CRAM
+		jsr	(LoadPal).l				; copy the palette to CRAM
 		vdp_comm.l	move,vram_LicenseFont,vram,write,(a4) ; set VDP to VRAM write at address $C20
 
 	.load_font:
 		move.l	(a1)+,(a5)				; copy the character set for the license message to VRAM
 		dbf	d6,.load_font
 
-		jsr Load_Mappings				; copy the ASCII-based mappings for the license message to VRAM
+		jsr (Load_Mappings).l				; copy the ASCII-based mappings for the license message to VRAM
 		
 		move.w	#vdp_enable_display|vdp_md_display,(a4)	; enable display, showing the license message
 		move.w	#$3C,d0
@@ -230,8 +233,7 @@ RAM_Code:
 		movea.l	(a0)+,sp				; load initial stack pointer value from cartridge into stack pointer
 		movea.l	(a0)+,a0				; load start vector from cartridge into a0
 		jmp	(a0)					; hand off to the cartridge by jumping to its start vector
-
-
+; =========================================================================
 
 DelayLoop:							; double-nested loop to delay for a couple seconds while the license message is displayed
 		move.w	#$95CE,d1				; set inner loop counter to 38,350
@@ -242,6 +244,8 @@ DelayLoop:							; double-nested loop to delay for a couple seconds while the li
 		rts
 
 		arraysize	RAM_Code	
+		; End of RAM code
+; =========================================================================
 
 Pal_Text_Data:
 		dc.w	1					; palette size
@@ -255,7 +259,7 @@ Pal_Text_Data:
 		dc.b	"   produced by or",endline 
 		dc.b	" under license from",endline 
 		dc.b	"sega,enterprises ltd{",endstring	; opening curly brace represents a period, comma may have been meant for a TM symbol or related
-
+; =========================================================================
 
 LoadPal: 
 		move.w	(a1)+,d0				; set loop counter to the palette size ($1, aka 2 colors)
@@ -265,6 +269,7 @@ LoadPal:
 		move.w 	(a1)+,(a5)				; copy the palette to CRAM
 		dbf	d0,.cram_loop
 		rts
+; =========================================================================
 
 Load_Mappings:
 		move.l	d5,(a4)					; on first run, set VDP to VRAM write at $C594; on all subsequent runs, set write address for new line
@@ -283,6 +288,7 @@ Load_Mappings:
 	.next_line:
 		addi.l	#$1000000,d5				; add $1000000 to make VDP command longword to start the next line
 		bra.s	Load_Mappings				; set new write address
+; =========================================================================		
 
 		dcb.l	19,$FFFFFFFF				; padding
 ROM_End:
