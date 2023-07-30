@@ -16,7 +16,7 @@
 
 		include "Addresses and Macros.asm"
 
-RomStart:
+ROM_Start:
 		; CPU vectors
 		dc.l   stack_pointer				; initial stack pointer value
         dc.l   EntryPoint					; start of program
@@ -30,7 +30,7 @@ ROM_Header:
         dc.b "OS 00000000-00"					; serial/version number
         dc.w $5B74						; checksum; interestingly, it does NOT match the ROM. This might be from sample code or from an earlier build of the ROM.
         dc.b "                "					; I/O support 
-        dc.l RomStart						; start address of ROM
+        dc.l ROM_Start						; start address of ROM
         dc.l ROM_End-1						; end address of ROM
         dc.l ram_start						; start address of RAM
         dc.l ram_end						; end address of RAM
@@ -43,7 +43,6 @@ ROM_Header:
 ErrorTrap: 
 		bra.s ErrorTrap					; any CPU exceptions that occur while bankswitched to the TMSS ROM are dumped in this infinite loop
 
-; =========================================================================
 ; ---------------------------------------------------------------------------
 ; This is a stripped-down version of the standard ICD_BLK4 init library.
 ; it does not clear the main RAM (which isn't necessary here since that was a
@@ -53,6 +52,7 @@ ErrorTrap:
 ; test program, also seem to account for a hypothetical hardware revision that 
 ; features this bootrom but NOT the VDP DTACK/RESET lock mechanism.
 ; ---------------------------------------------------------------------------
+
 EntryPoint:
 		lea	SetupValues(pc),a5			; load setup array	
         movem.l (a5)+,d5-a4					; first VDP register value, clear_ram loop counter (unused), VDP register increment, Z80 RAM start (unused), Z80 bus request register, Z80 reset register, VDP data port, VDP control port
@@ -89,7 +89,7 @@ EntryPoint:
 		move.l  d0,(a3)					; clear the CRAM
         dbf	d3,.clear_cram
         	
-		vdp_comm.l	move,0,vsram,write,(a4)
+		vdp_comm.l	move,0,vsram,write,(a4)			; set VDP to VSRAM write
         moveq	#(sizeof_vsram/4)-1, d4				; set loop counter to $13
 	.clear_vsram:
 		move.l  d0,(a3)					; clear the VSRAM
@@ -107,15 +107,15 @@ SetupValues:
 		dc.l    vdp_mode_register1			; d5
         dc.l    (sizeof_ram/4)-1				; d6, unused
         dc.l    vdp_mode_register2-vdp_mode_register1		; d7
-        dc.l    z80_ram						; a0	; unused
+        dc.l    z80_ram						; a0, unused
         dc.l    z80_bus_request					; a1
-        dc.l    z80_reset					; a2,	; unused
+        dc.l    z80_reset					; a2, unused
         dc.l    vdp_data_port					; a3
         dc.l    vdp_control_port				; a4
 
 	SetupVDP:
 		dc.b	vdp_md_color&$FF			; $80, Mega Drive/Genesis color mode, horizontal interrupts disabled
-        dc.b	(vdp_md_display|vdp_ntsc_display|vdp_enable_dma)&$FF ; $81: VDP mode 5, DMA enabled, NTSC mode, DMA enabled
+        dc.b	(vdp_md_display|vdp_ntsc_display|vdp_enable_dma)&$FF ; $81: VDP mode 5, NTSC mode, DMA enabled
         dc.b	(vdp_fg_nametable+(vram_fg>>10))&$FF		; $82: Foreground nametable at $C000
         dc.b	(vdp_window_nametable+(vram_window>>10))&$FF	; $83: Window nametable at $F000
         dc.b	(vdp_bg_nametable+(vram_bg>>13))&$FF		; $84: Background nametable at $E000
@@ -169,7 +169,6 @@ Test_Registers:
         dc.l    vdp_data_port					; a5
         dc.l    console_version					; a6
 
-; =========================================================================
 ; ---------------------------------------------------------------------------
 ; Everything from here to 'arraysize RAM_Code' runs from RAM.
 ; This is an excellent example of relocatable code: all branches within this
@@ -178,7 +177,6 @@ Test_Registers:
 ; ---------------------------------------------------------------------------
 
 RAM_Code:
-
 		bset	#0,(a3)					; bankswitch to cartridge
 		cmp.l	(ROM_Header).w,d7			; is 'SEGA' at the start of the ROM header?
 		beq.s	.pass					; if so, cartridge has passed test
@@ -198,7 +196,7 @@ RAM_Code:
 
 	.done:
 		rts						; if we're here, cartridge failed TMSS check; return and trap in FailLoop
-; =========================================================================
+
 ; ---------------------------------------------------------------------------
 ; If cartridge passed the test, load the message assets and display it for
 ; several seconds.
@@ -248,8 +246,8 @@ DelayLoop:							; double-nested loop to delay for a couple seconds while the li
 ; =========================================================================
 
 Pal_Text_Data:
-		dc.w	1					; palette size
-		dc.w	$EEE					; white
+		dc.w	2-1					; palette size
+		dc.w	cWhite					; white
 		dc.w	$EE8					; blue (for unused SEGA logo text)
 
 	;.license_font:

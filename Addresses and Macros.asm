@@ -82,6 +82,8 @@ tPSG2:			equ $A0					; PSG channel 2
 tPSG3:			equ $C0					; PSG channel 3
 tPSG4:			equ $E0					; PSG channel 4
 
+cWhite:			equ $EEE
+
 ; ---------------------------------------------------------------------------
 ; Addresses and constants specific to this program
 ; ---------------------------------------------------------------------------
@@ -106,8 +108,6 @@ sizeof_LicenseFont:	equ	filesize("License Text Font.bin")
 ; Flag values used in license text strings
 endline:	equ $FF
 endstring:	equ 0
-
-; ===========================================================================
 
 ; ---------------------------------------------------------------------------
 ; Test if an argument is used
