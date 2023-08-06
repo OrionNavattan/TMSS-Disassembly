@@ -160,7 +160,7 @@ FailLoop:
 
 Test_Registers:
 		dc.l	' SEG'					; d4
-        vdp_comm.l	dc,(vram_fg+((sizeof_vram_row_64*11)+(2*10))),vram,write ;d5 ; VRAM write at $C594 (Line 11, column 10), start location of mappings for first line of license message
+        vdp_comm.l	dc,(vram_fg+((sizeof_vram_row_64*11)+(2*10))),vram,write ; d5 ; VRAM write at $C594 (Line 11, column 10), start location of mappings for first line of license message
         dc.l	(sizeof_LicenseFont/4)-1			; d6; loops to copy license message font to VRAM
         dc.l    'SEGA'						; d7
         dc.l    tmss_sega					; a2
@@ -210,7 +210,7 @@ RAM_Code:
 		move.l	(a1)+,(a5)				; copy the character set for the license message to VRAM
 		dbf	d6,.load_font
 
-		jsr (Load_Mappings).l				; copy the ASCII-based mappings for the license message to VRAM
+		jsr (Load_Tilemap).l				; copy the ASCII-based tilemap for the license message to VRAM
 		
 		move.w	#vdp_enable_display|vdp_md_display,(a4)	; enable display, showing the license message
 		move.w	#$3C,d0
@@ -269,7 +269,7 @@ LoadPal:
 		rts
 ; =========================================================================
 
-Load_Mappings:
+Load_Tilemap:
 		move.l	d5,(a4)					; on first run, set VDP to VRAM write at $C594; on all subsequent runs, set write address for new line
 
 	.main:
@@ -285,7 +285,7 @@ Load_Mappings:
 
 	.next_line:
 		addi.l	#$1000000,d5				; add $1000000 to make VDP command longword to start the next line
-		bra.s	Load_Mappings				; set new write address
+		bra.s	Load_Tilemap				; set new write address
 ; =========================================================================		
 
 		dcb.l	19,$FFFFFFFF				; padding
